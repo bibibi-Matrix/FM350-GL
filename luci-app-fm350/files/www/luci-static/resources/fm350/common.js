@@ -2,17 +2,19 @@
 'require baseclass';
 'require ui';
 
-// 页面共用的状态名称、配色、通知与轮询封装。
-// LuCI 的 require 要求模块工厂返回构造器（内部会 new 一次并注册到 L.fm350.common），
-// 所以这里用 baseclass.extend 返回类，引用方拿到的实例直接带下列方法。
+// Общие для страниц названия состояний, цвета, уведомления и обёртка опроса.
+// require в LuCI требует, чтобы фабрика модуля возвращала конструктор (внутри
+// он один раз вызывается через new и регистрируется в L.fm350.common),
+// поэтому здесь baseclass.extend возвращает класс, а вызывающая сторона
+// сразу получает экземпляр с перечисленными ниже методами.
 
 var STATE_NAMES = {
-	ABSENT: '模块离线',
-	PRESENT: '模块就绪',
-	DIALING: '拨号中',
-	RECOVERING: '恢复中',
-	ONLINE: '在线',
-	DISABLED: '拨号已停用'
+	ABSENT: 'Модуль не в сети',
+	PRESENT: 'Модуль готов',
+	DIALING: 'Подключение…',
+	RECOVERING: 'Восстановление…',
+	ONLINE: 'В сети',
+	DISABLED: 'Подключение отключено'
 };
 
 var STATE_COLORS = {
@@ -24,7 +26,8 @@ var STATE_COLORS = {
 	DISABLED: '#7d7d7d'
 };
 
-// 主题缺 .fade-out 过渡时通知的关闭按钮不生效，注入兜底过渡并限时自动消失
+// Если в теме нет перехода .fade-out, кнопка закрытия уведомления не работает:
+// подставляем запасной переход и автоматическое скрытие по таймеру
 var NOTIFY_CSS = '.alert-message.fade-out{opacity:0 !important;transition:opacity .35s ease !important;}';
 
 return baseclass.extend({
@@ -54,12 +57,13 @@ return baseclass.extend({
 		return ui.addTimeLimitedNotification(null, E('p', {}, msg), 8000, type || 'info');
 	},
 
-	// 部分 LuCI 前端 ui 模块没有 setLoading
+	// В некоторых сборках LuCI у модуля ui нет setLoading
 	setLoading: function(on) {
 		try { ui.setLoading(on); } catch (e) {}
 	},
 
-	// 轮询：root 离开文档后自动注销，避免切换页面后残留定时器与请求
+	// Опрос: после удаления root из документа автоматически снимается,
+	// чтобы при переходе на другую страницу не оставались таймеры и запросы
 	poll: function(root, interval, fn) {
 		var tick = function() {
 			if (!root.isConnected) {

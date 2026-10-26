@@ -21,40 +21,40 @@ return view.extend({
 	render: function() {
 		var input = E('input', {
 			'class': 'cbi-input-text',
-			'placeholder': '例如: AT+CPIN?   AT+COPS?   AT+GTCCINFO?',
+			'placeholder': 'например: AT+CPIN?   AT+COPS?   AT+GTCCINFO?',
 			'style': 'max-width:420px'
 		});
-		var out = E('pre', { 'class': 'fm350-console' }, '发送命令后在此显示结果…');
+		var out = E('pre', { 'class': 'fm350-console' }, 'Здесь появится результат выполнения команды…');
 
 		function send(cmd) {
 			if (!cmd)
 				return;
-			if (dangerRe.test(cmd) && !window.confirm('该命令可能中断网络连接，确定发送？'))
+			if (dangerRe.test(cmd) && !window.confirm('Эта команда может прервать подключение к сети. Отправить?'))
 				return;
-			out.textContent += '>> ' + cmd + '\n… 等待串口锁（最长 20s）并执行（最长 15s）…\n';
+			out.textContent += '>> ' + cmd + '\n… ожидание блокировки порта (до 20 с) и выполнение (до 15 с)…\n';
 			out.scrollTop = out.scrollHeight;
 			common.setLoading(true);
 			var timer = setTimeout(function() {
-				out.textContent += '[无响应] 后端 40s 未返回，可稍后重试\n\n';
+				out.textContent += '[Нет ответа] сервер не ответил за 40 с, попробуйте позже\n\n';
 				out.scrollTop = out.scrollHeight;
 			}, 40000);
 			callAt(cmd).then(function(d) {
 				clearTimeout(timer);
 				common.setLoading(false);
 				if (d.error) {
-					out.textContent += '[错误] ' + d.error + '\n\n';
+					out.textContent += '[Ошибка] ' + d.error + '\n\n';
 				} else {
-					out.textContent += (d.resp && d.resp.trim() ? d.resp : '（空响应：命令可能不被支持或串口繁忙，请重试）') + '\n\n';
+					out.textContent += (d.resp && d.resp.trim() ? d.resp : '(пустой ответ: команда может быть не поддерживаться или порт занят, повторите попытку)') + '\n\n';
 				}
 				out.scrollTop = out.scrollHeight;
 			}).catch(function(e) {
 				clearTimeout(timer);
 				common.setLoading(false);
-				out.textContent += '[错误] ' + e + '\n\n';
+				out.textContent += '[Ошибка] ' + e + '\n\n';
 			});
 		}
 
-		var btn = E('button', { 'class': 'btn primary' }, '发送');
+		var btn = E('button', { 'class': 'btn primary' }, 'Отправить');
 		btn.addEventListener('click', function() {
 			send(input.value.trim());
 		});
@@ -75,8 +75,8 @@ return view.extend({
 		});
 
 		var body = E('div', { 'class': 'cbi-section' }, [
-			E('h3', {}, 'AT 命令控制台'),
-			E('p', { 'class': 'muted' }, '串口互斥访问 · 15s 执行看门狗 · 破坏性命令需二次确认'),
+			E('h3', {}, 'Консоль AT-команд'),
+			E('p', { 'class': 'muted' }, 'Монопольный доступ к последовательному порту · таймаут выполнения 15 с · опасные команды требуют подтверждения'),
 			E('div', { 'class': 'fm350-inputrow' }, [ input, btn ]),
 			quickRow,
 			out,

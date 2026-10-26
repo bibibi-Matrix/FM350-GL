@@ -7,7 +7,7 @@ var callLogs = rpc.declare({ object: 'fm350', method: 'logs', params: ['lines'],
 var callEvents = rpc.declare({ object: 'fm350', method: 'events', params: ['lines'], expect: {} });
 var callEventsClear = rpc.declare({ object: 'fm350', method: 'events_clear', expect: {} });
 
-// 显示上限：超出自动移除旧行（只保留最近 N 行）
+// Предел отображения: старые строки удаляются автоматически (остаются только последние N)
 var MAX_LINES = 80;
 
 function tailLines(text, n) {
@@ -27,53 +27,53 @@ var STYLE = E('style', {}, [
 
 return view.extend({
 	render: function() {
-		var pre1 = E('pre', { 'class': 'fm350-log' }, '加载中…');
-		var pre2 = E('pre', { 'class': 'fm350-log' }, '加载中…');
+		var pre1 = E('pre', { 'class': 'fm350-log' }, 'Загрузка…');
+		var pre2 = E('pre', { 'class': 'fm350-log' }, 'Загрузка…');
 
-		// 默认滚动到最新一行（底部）
+		// По умолчанию прокрутка к последней строке (вниз)
 		function scrollBottom(pre) {
 			pre.scrollTop = pre.scrollHeight;
 		}
 
 		function refresh() {
 			Promise.all([ callLogs(MAX_LINES + 40), callEvents(MAX_LINES + 40) ]).then(function(r) {
-				pre1.textContent = tailLines(r[0].logs, MAX_LINES) || '（无 syslog 记录）';
-				pre2.textContent = tailLines((r[1].events || []).join('\n'), MAX_LINES) || '（无事件）';
+				pre1.textContent = tailLines(r[0].logs, MAX_LINES) || '(записей в syslog нет)';
+				pre2.textContent = tailLines((r[1].events || []).join('\n'), MAX_LINES) || '(событий нет)';
 				scrollBottom(pre1);
 				scrollBottom(pre2);
 			}).catch(function(e) {
 				pre1.textContent = /abort|Abort/i.test(String(e))
-					? '请求被页面导航中断（属正常现象），点击"刷新"重试'
-					: '获取失败: ' + e;
+					? 'Запрос прерван переходом по странице (это нормально), нажмите «Обновить»'
+					: 'Не удалось получить данные: ' + e;
 			});
 		}
 
 		function clearLogs() {
-			pre1.textContent = '（已清除本页显示；系统日志本身保留，点击"刷新"可重新载入）';
+			pre1.textContent = '(Отображение на этой странице очищено; системный журнал сохранён, нажмите «Обновить», чтобы загрузить снова)';
 		}
 
 		function clearEvents() {
-			if (!window.confirm('清空守护事件时间线？将删除事件文件内容（后续事件会重新累积）。'))
+			if (!window.confirm('Очистить хронологию событий службы? Содержимое файла событий будет удалено (новые события начнут накапливаться заново).'))
 				return;
 			callEventsClear().then(function(r) {
 				var ok = r && r.ok;
-				common.notify(ok ? '事件时间线已清空' : ('清除失败: ' + ((r && r.out) || 'unknown')), ok ? 'info' : 'error');
-				pre2.textContent = ok ? '（事件已清空）' : pre2.textContent;
+				common.notify(ok ? 'Хронология событий очищена' : ('Не удалось очистить: ' + ((r && r.out) || 'unknown')), ok ? 'info' : 'error');
+				pre2.textContent = ok ? '(События очищены)' : pre2.textContent;
 			}).catch(function(e) {
-				common.notify('清除失败: ' + ((e && (e.message || e.error)) || e), 'error');
+				common.notify('Не удалось очистить: ' + ((e && (e.message || e.error)) || e), 'error');
 			});
 		}
 
 		var bar1 = E('div', { 'class': 'fm350-logbar' }, [
-			E('button', { 'class': 'btn primary' }, '刷新'),
-			E('button', { 'class': 'btn' }, '清除显示')
+			E('button', { 'class': 'btn primary' }, 'Обновить'),
+			E('button', { 'class': 'btn' }, 'Очистить отображение')
 		]);
 		bar1.children[0].addEventListener('click', refresh);
 		bar1.children[1].addEventListener('click', clearLogs);
 
 		var bar2 = E('div', { 'class': 'fm350-logbar' }, [
-			E('button', { 'class': 'btn primary' }, '刷新'),
-			E('button', { 'class': 'btn btn-danger' }, '清空事件')
+			E('button', { 'class': 'btn primary' }, 'Обновить'),
+			E('button', { 'class': 'btn btn-danger' }, 'Очистить события')
 		]);
 		bar2.children[0].addEventListener('click', refresh);
 		bar2.children[1].addEventListener('click', clearEvents);
@@ -81,12 +81,12 @@ return view.extend({
 		refresh();
 
 		return E('div', { 'class': 'cbi-section' }, [
-			E('h3', {}, '运行日志（logread · fm350）'),
-			E('p', { 'class': 'muted' }, '旧 → 新排列（最新在底部），仅显示最近 ' + MAX_LINES + ' 行，打开即滚动到最新行'),
+			E('h3', {}, 'Журнал работы (logread · fm350)'),
+			E('p', { 'class': 'muted' }, 'От старых к новым (новые внизу), показаны только последние ' + MAX_LINES + ' строк, при открытии прокрутка к последней строке'),
 			bar1,
 			pre1,
-			E('h3', {}, '守护事件时间线'),
-			E('p', { 'class': 'muted' }, '旧 → 新排列（最新在底部），仅显示最近 ' + MAX_LINES + ' 条'),
+			E('h3', {}, 'Хронология событий службы'),
+			E('p', { 'class': 'muted' }, 'От старых к новым (новые внизу), показаны только последние ' + MAX_LINES + ' записей'),
 			bar2,
 			pre2,
 			STYLE

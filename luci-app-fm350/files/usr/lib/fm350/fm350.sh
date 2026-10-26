@@ -85,7 +85,7 @@ P_TX=0
 startup_guard()
 {
 	if pgrep -f "modem_network_task.sh|/usr/share/modem/modem_task.sh|modem_watching.sh" >/dev/null 2>&1; then
-		fm350_log err "检测到其他 modem 守护可能占用串口，拒绝启动；请先停止冲突服务"
+		fm350_log err "Обнаружена другая служба модема, которая может занимать порт: запуск отменён, сначала остановите конфликтующую службу"
 		exit 1
 	fi
 }
@@ -95,7 +95,7 @@ singleton_guard()
 {
 	exec 9>"${RU}/daemon.lock"
 	if ! flock -n 9; then
-		fm350_log warn "已有守护实例运行中，本实例退出"
+		fm350_log warn "Экземпляр службы уже запущен, этот экземпляр завершается"
 		exit 1
 	fi
 	echo $$ > "${RU}/daemon.pid"
@@ -134,9 +134,9 @@ write_state()
 	case "$R_PROBLEM" in
 		"v6") problem_name="IPv6" ;;
 		"v4") problem_name="IPv4" ;;
-		"data") problem_name="数据面" ;;
-		"absent") problem_name="模块离线" ;;
-		"config") problem_name="网络接口配置" ;;
+		"data") problem_name="Плоскость данных" ;;
+		"absent") problem_name="Модуль не в сети" ;;
+		"config") problem_name="Настройка сетевого интерфейса" ;;
 		*) problem_name="" ;;
 	esac
 	jq -n --arg ts "$now" \
@@ -275,13 +275,13 @@ sync_profile_enable()
 {
 	local current="$1" previous="$PROFILE_ENABLED_LAST" allow_attempt="${2:-1}" now
 	if [ "$previous" = "1" ] && [ "$current" != "1" ]; then
-		event "拨号已停用（profile.enable=0）"
+		event "Подключение отключено (profile.enable=0)"
 		PROFILE_DISABLE_PENDING=1
 		PROFILE_DISABLE_FAILED=0
 		LAST_DISABLE_ATTEMPT=0
 		LAST_DISABLE_LOG=0
 	elif [ "$previous" != "1" ] && [ "$current" = "1" ]; then
-		event "拨号已启用"
+		event "Подключение включено"
 		PROFILE_DISABLE_PENDING=0
 		PROFILE_DISABLE_FAILED=0
 		LAST_DISABLE_ATTEMPT=0
@@ -297,11 +297,11 @@ sync_profile_enable()
 			PROFILE_DISABLE_PENDING=0
 			PROFILE_DISABLE_FAILED=0
 			LAST_DISABLE_LOG=0
-			event "停用拨号：PDP 已断开"
+			event "Отключение: PDP разорван"
 		else
 			PROFILE_DISABLE_FAILED=1
 			if [ "$LAST_DISABLE_LOG" = "0" ] || [ "$((now - LAST_DISABLE_LOG))" -ge "$PROFILE_DISABLE_LOG_INTERVAL" ]; then
-				event "停用拨号：断开失败，将在 ${PROFILE_DISABLE_RETRY_INTERVAL}s 后重试（${DIAL_STOP_REASON:-AT 响应无效}）"
+				event "Отключение: не удалось разорвать, повтор через ${PROFILE_DISABLE_RETRY_INTERVAL} с (${DIAL_STOP_REASON:-некорректный ответ AT})"
 				LAST_DISABLE_LOG=$now
 			fi
 		fi
@@ -350,13 +350,13 @@ handle_req()
 		enable|disable) ;;
 		*)
 			if [ "$(fcfg global enabled)" != "1" ] || [ -z "$D_USB_PATH" ] || [ ! -e "/sys/bus/usb/devices/$D_USB_PATH" ]; then
-				event "UI 指令未执行: $req（管理器停用或设备缺席）"
+				event "Команда UI не выполнена: $req (менеджер отключён или устройство отсутствует)"
 				return 0
 			fi
 			case "$req" in
 				reconnect|modem_restart)
 					if [ "$(fcfg profile enable)" != "1" ]; then
-						event "UI 指令未执行: $req（拨号已停用）"
+						event "Команда UI не выполнена: $req (подключение отключено)"
 						return 0
 					fi
 				;;
@@ -367,37 +367,37 @@ handle_req()
 		"enable")
 			uci set fm350.profile.enable=1
 			uci commit fm350
-			event "UI 指令: 启用拨号"
+			event "Команда UI: включение подключения"
 		;;
 		"disable")
 			uci set fm350.profile.enable=0
 			uci commit fm350
-			event "UI 指令: 停用拨号"
+			event "Команда UI: отключение подключения"
 		;;
 		"reconnect")
-			event "UI 指令: 重新拨号"
+			event "Команда UI: переподключение"
 			if [ -n "$port" ] && [ -e "$port" ]; then
 				if ! dial_attempt "$port"; then
-					event "UI 重拨失败：${AT_CHECK_REASON:-AT 命令未成功}"
+					event "Команда UI: переподключение не удалось: ${AT_CHECK_REASON:-AT-команда не выполнена}"
 				fi
 			fi
 		;;
 		"modem_restart")
-			event "UI 指令: 软重启模组"
+			event "Команда UI: мягкая перезагрузка модема"
 			if [ -n "$port" ] && ! action_modem_restart "$port"; then
-				event "UI 软重启失败：AT 命令未成功"
+				event "Команда UI: мягкая перезагрузка не удалась, AT-команда не выполнена"
 			fi
 		;;
 		"usb_reset")
-			event "UI 指令: USB 硬件复位"
-			action_usb_reset "$D_USB_PATH" "$D_DEVNODE" || event "UI USB 硬件复位失败"
+			event "Команда UI: аппаратный сброс USB"
+			action_usb_reset "$D_USB_PATH" "$D_DEVNODE" || event "Команда UI: аппаратный сброс USB не удался"
 		;;
 		"ifup")
-			event "UI 指令: 重建网络接口"
+			event "Команда UI: пересоздание сетевого интерфейса"
 			action_ifup
 		;;
 		*)
-			fm350_log warn "未知 UI 指令: $req"
+			fm350_log warn "Неизвестная команда UI: $req"
 		;;
 	esac
 }
@@ -426,19 +426,19 @@ cycle()
 		clear_info_snapshots
 		if [ "$ABSENT_SINCE" = "0" ]; then
 			ABSENT_SINCE=$now
-			event "模块离线（USB 不可见）"
+			event "Модуль не в сети (не виден по USB)"
 		fi
 		R_PROBLEM="absent"
 		R_SINCE=$ABSENT_SINCE
 		if [ "$((now - ABSENT_SINCE))" -ge "$(fcfg watch reappear_timeout)" ] && [ "$((now - LAST_ABSENT_ALARM))" -ge 600 ]; then
-			event "模块离线已超过 $(fcfg watch reappear_timeout)s，请检查 USB 线缆/供电"
+			event "Модуль отсутствует дольше $(fcfg watch reappear_timeout) с, проверьте кабель USB и питание"
 			LAST_ABSENT_ALARM=$now
 		fi
 		write_state
 		return 0
 	fi
 	if [ "$ABSENT_SINCE" != "0" ]; then
-		event "模块重新出现（${D_USB_PATH}），自动重新拨号中"
+		event "Модуль снова обнаружен (${D_USB_PATH}), выполняется автоматическое переподключение"
 		ABSENT_SINCE=0
 		R_PROBLEM=""
 		R_SINCE=0
@@ -452,7 +452,7 @@ cycle()
 	if [ "$D_USB_PATH" != "$LAST_USB_PATH" ]; then
 		old="$LAST_USB_PATH"
 		LAST_USB_PATH="$D_USB_PATH"
-		[ -n "$old" ] && [ "$old" != "$D_USB_PATH" ] && event "模块位置变更: ${old} → ${D_USB_PATH}"
+		[ -n "$old" ] && [ "$old" != "$D_USB_PATH" ] && event "Расположение модуля изменилось: ${old} → ${D_USB_PATH}"
 		D_IFNAME=""
 		D_AT_PORT=""
 		R_PROBLEM=""
@@ -464,10 +464,10 @@ cycle()
 	if [ -n "$D_VID" ] && [ "$D_VID:$D_PID" != "$LAST_VID:$LAST_PID" ]; then
 		LAST_VID="$D_VID"
 		LAST_PID="$D_PID"
-		event "模组识别: ${D_VID}:${D_PID}（配置留空时为自动识别）"
+		event "Модем определён: ${D_VID}:${D_PID} (если настройка пуста — автоопределение)"
 	fi
 	hint=$(fcfg global usb_path_hint)
-	[ -n "$hint" ] && [ "$hint" != "$D_USB_PATH" ] && event "模块位置与提示路径不一致: hint=${hint} now=${D_USB_PATH}"
+	[ -n "$hint" ] && [ "$hint" != "$D_USB_PATH" ] && event "Расположение модуля не совпадает с подсказкой: hint=${hint} now=${D_USB_PATH}"
 	[ -n "$D_IFNAME" ] && [ ! -e "/sys/class/net/$D_IFNAME" ] && D_IFNAME=""
 	[ -n "$D_AT_PORT" ] && [ ! -e "$D_AT_PORT" ] && D_AT_PORT=""
 	[ -z "$D_IFNAME" ] && discover_ifname
@@ -489,7 +489,7 @@ cycle()
 	fi
 	if ! dial_ensure_interfaces "$D_IFNAME"; then
 		if [ "$R_PROBLEM" != "config" ]; then
-			event "网络接口配置失败，暂停拨号、地址刷新与自动恢复；请检查接口名称和归属"
+			event "Не удалось настроить сетевые интерфейсы: подключение, обновление адресов и автовосстановление приостановлены; проверьте имена интерфейсов и принадлежность"
 			R_SINCE=$now
 		fi
 		R_PROBLEM="config"
@@ -498,7 +498,7 @@ cycle()
 		return 0
 	fi
 	if [ "$R_PROBLEM" = "config" ]; then
-		event "网络接口配置已恢复，继续管理"
+		event "Настройка сетевых интерфейсов восстановлена, управление продолжается"
 		recover_done
 	fi
 
@@ -511,15 +511,15 @@ cycle()
 
 	if [ -z "$V4_AT" ] || [ "$V4_AT" = "0.0.0.0" ]; then
 		if [ "$R_PROBLEM" != "v4" ]; then
-			event "拨号丢失（CGPADDR 为空），进入恢复流程"
+			event "Подключение потеряно (CGPADDR пуст), запуск восстановления"
 			R_PROBLEM="v4"
 			R_SINCE=$now
 			R_LEVEL=0
 		fi
 		if [ $((now - LAST_DIAL)) -ge 60 ] && [ "$R_LEVEL" -le 1 ]; then
-			event "重拨（AT+CGACT=1,${define}）"
+			event "Переподключение (AT+CGACT=1,${define})"
 			if ! dial_attempt "$D_AT_PORT" "$now"; then
-				event "自动重拨失败：${AT_CHECK_REASON:-AT 命令未成功}"
+				event "Автоматическое переподключение не удалось: ${AT_CHECK_REASON:-AT-команда не выполнена}"
 			fi
 		fi
 		escalate_v4 "$now"
@@ -530,7 +530,7 @@ cycle()
 	# v4 地址变化 → 刷新 uci（首次/换网）；复用本轮已取到的权威地址，避免重复 AT 查询
 	v4cur=$(uci -q get "network.$(fcfg global v4_ifname).ipaddr")
 	if [ "$v4cur" != "$V4_AT" ]; then
-		event "IPv4 地址变更: ${v4cur:-无} → ${V4_AT}"
+		event "Адрес IPv4 изменился: ${v4cur:-нет} → ${V4_AT}"
 		refresh_v4 "$D_AT_PORT" "$define" "$(fcfg global v4_ifname)" "$V4_AT"
 		SESS_SINCE=$now
 	fi
@@ -543,7 +543,7 @@ cycle()
 			LAST_COUNTER_TS=$now
 		else
 			if frozen_elapsed "$now" "$sum" && auto_usb_reset "$now"; then
-				event "数据面假死（计数无变化且 $(fcfg watch ipv4_ping_target) 不可达 ≥$(fcfg watch frozen_sample)s），执行 USB 复位"
+				event "Зависание плоскости данных (счётчики не меняются, $(fcfg watch ipv4_ping_target) недоступен ≥$(fcfg watch frozen_sample) с), выполняется сброс USB"
 				COUNTER_SUM=0
 				R_PROBLEM="data"
 				R_SINCE=$now
@@ -560,7 +560,7 @@ cycle()
 	probe_v4_kernel "$D_IFNAME"
 	if [ "$K_V4_ROUTE" != "1" ]; then
 		if [ "$R_PROBLEM" != "v4" ]; then
-			event "IPv4 路由丢失（内核），进入恢复流程"
+			event "Маршрут IPv4 потерян (ядро), запуск восстановления"
 			R_PROBLEM="v4"
 			R_SINCE=$now
 			R_LEVEL=0
@@ -596,7 +596,7 @@ cycle()
 				# 恢复事件去抖：10 分钟内只记录一次（状态仍即时复位）
 				if [ "$((now - LAST_V6DONE))" -ge 600 ]; then
 					LAST_V6DONE=$now
-					event "网络恢复完成（IPv6）"
+					event "Сеть восстановлена (IPv6)"
 				fi
 			fi
 		fi
@@ -615,7 +615,7 @@ cycle()
 		# 恢复事件去抖：5 分钟内只记录一次
 		if [ "$((now - LAST_REC_DONE))" -ge 300 ]; then
 			LAST_REC_DONE=$now
-			event "网络恢复完成"
+			event "Сеть восстановлена"
 		fi
 	fi
 	if [ "$R_PROBLEM" = "" ]; then
@@ -630,7 +630,7 @@ cycle()
 main()
 {
 	mkdir -p "$RU"
-	command -v flock >/dev/null 2>&1 || { fm350_log err "缺少 flock，无法保证串口与守护互斥"; exit 1; }
+	command -v flock >/dev/null 2>&1 || { fm350_log err "Нет flock: невозможно обеспечить монопольный доступ к порту"; exit 1; }
 	startup_guard
 	singleton_guard
 	# 恢复上次发现缓存（重启后减少 AT 全量探测）
@@ -650,7 +650,7 @@ main()
 	}
 	s=$(state_jget sess_since)
 	[ -n "$s" ] && [ "$s" -gt 0 ] && SESS_SINCE=$s
-	event "FM350 管理守护启动（pid $$）"
+	event "Служба управления FM350 запущена (pid $$)"
 	while true; do
 		cycle
 		sleep "$(fcfg global interval)"
@@ -662,16 +662,16 @@ check_mode()
 	echo "== fm350 check =="
 	if discover_scan; then
 		echo "USB: present path=$D_USB_PATH count=$D_USB_COUNT devnode=$D_DEVNODE"
-		echo "netif: ${D_IFNAME:-未就绪}"
-		echo "at_port: ${D_AT_PORT:-未探测}"
+		echo "netif: ${D_IFNAME:-не готов}"
+		echo "at_port: ${D_AT_PORT:-не определён}"
 	else
 		echo "USB: ABSENT"
 		return 1
 	fi
 	probe_v4_kernel "$D_IFNAME"
-	echo "v4: addr=${K_V4_ADDR:-无} route=${K_V4_ROUTE}"
+	echo "v4: addr=${K_V4_ADDR:-нет} route=${K_V4_ROUTE}"
 	probe_v6_kernel "$D_IFNAME"
-	echo "v6: addr=${K_V6_ADDR:-无} route=${K_V6_ROUTE}"
+	echo "v6: addr=${K_V6_ADDR:-нет} route=${K_V6_ROUTE}"
 	if [ -n "$D_AT_PORT" ]; then
 		echo "AT: $(at_run "$D_AT_PORT" 'ATI' 4 | tr -d '\r' | head -3 | tr '\n' ' ')"
 	fi

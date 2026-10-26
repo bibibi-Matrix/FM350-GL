@@ -2,7 +2,7 @@
 
 action_ifup()
 {
-	event "恢复动作 L1: 重建接口 $(fcfg global v4_ifname) / $(fcfg global v6_ifname)"
+	event "Действие восстановления L1: пересоздание интерфейсов $(fcfg global v4_ifname) / $(fcfg global v6_ifname)"
 	ifup "$(fcfg global v4_ifname)" 2>/dev/null
 	ifup "$(fcfg global v6_ifname)" 2>/dev/null
 }
@@ -11,7 +11,7 @@ action_v6_renew()
 {
 	local v6
 	v6=$(fcfg global v6_ifname)
-	event "恢复动作 IPv6: 刷新 ${v6} (odhcp6c)"
+	event "Действие восстановления IPv6: обновление ${v6} (odhcp6c)"
 	ifdown "$v6" 2>/dev/null
 	ifup "$v6" 2>/dev/null
 }
@@ -23,7 +23,7 @@ action_modem_restart()
 	SERIAL_PAUSE_UNTIL=$((LAST_RESTART + 30))
 	clear_info_snapshots
 	define=$(fcfg profile define_connect)
-	event "恢复动作 L2: AT+CFUN 软重启模组 (${port})"
+	event "Действие восстановления L2: мягкая перезагрузка модема через AT+CFUN (${port})"
 	at_check "$port" "AT+CFUN=0" 8 || return 1
 	sleep 3
 	at_check "$port" "AT+CFUN=1" 8 || return 1
@@ -39,7 +39,7 @@ action_usb_reset()
 	LAST_USBRESET_ATTEMPT=$(date +%s)
 	SERIAL_PAUSE_UNTIL=$((LAST_USBRESET_ATTEMPT + 30))
 	clear_info_snapshots
-	event "恢复动作 L3: USB 级复位 ${path} (${devnode:-未定位})"
+	event "Действие восстановления L3: сброс USB ${path} (${devnode:-не найден})"
 	usb_reset_device "$path" "$devnode" || return 1
 	LAST_USBRESET_SUCCESS=$(date +%s)
 	mark_session_success
@@ -118,7 +118,7 @@ escalate_v4()
 	cool=$(fcfg watch cooldown)
 	# 总恢复超时覆盖整个流程，USB 复位失败或被禁用时也能进入下一恢复周期。
 	if [ "$elapsed" -ge "$end_t" ]; then
-		event "恢复循环超时(${elapsed}s)，进入告警；请人工检查 USB/模组，重新开始恢复计时"
+		event "Цикл восстановления превысил таймаут (${elapsed} с), переход к оповещению; проверьте USB и модем вручную, отсчёт восстановления начнётся заново"
 		R_SINCE=$now
 		R_LEVEL=0
 		return 0
@@ -179,7 +179,7 @@ escalate_v6()
 		if [ "$last" -ge 60 ]; then
 			# 下一轮仍是硬故障，才算上次刷新失败。
 			if [ "$V6_RENEW_COUNT" -ge 3 ] && [ "$(fcfg watch ipv6_escalate)" = "1" ]; then
-				event "IPv6 连续刷新失败，升级为整体恢复"
+				event "Обновление IPv6 несколько раз подряд не удалось, выполняется общее восстановление"
 				V6_ESCALATED=1
 				R_SINCE=$now
 				R_LEVEL=1
@@ -196,7 +196,7 @@ escalate_v6()
 		R_LEVEL=0
 		# soft：前缀可能已被运营商回收，30 分钟兜底刷新一次
 		if [ "$last" -ge 1800 ]; then
-			event "IPv6 出口不可达，执行兜底前缀刷新"
+			event "Выход IPv6 недоступен, выполняется резервное обновление префикса"
 			action_v6_renew
 			LAST_V6RENEW=$now
 		fi

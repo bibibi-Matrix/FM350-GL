@@ -69,11 +69,11 @@ methods.at_exec = {
 		const p = argsOf(request);
 		const cmd = p.cmd || '';
 		if (length(cmd) > 256 || !match(cmd, /^[\x20-\x7e]+$/))
-			return { error: '非法 AT 命令' };
+			return { error: 'Недопустимая AT-команда' };
 		const st = readState();
 		const port = st.net && st.net.at_port ? st.net.at_port : '';
 		if (!port)
-			return { error: 'AT 端口未就绪' };
+			return { error: 'Порт AT не готов' };
 		const resp = sh(SH + ' at_cli ' + q(port) + ' ' + q(cmd) + ' 15');
 		return { resp: resp };
 	}
@@ -90,11 +90,11 @@ methods.dial_op = {
 			if (ok[i] == action)
 				found = true;
 		if (!found)
-			return { error: '未知操作' };
+			return { error: 'Неизвестная операция' };
 		const out = trim(sh(SH + ' enqueue ' + q(action)));
 		if (out == 'queued')
 			return { queued: true, action: action };
-		return { error: out == 'busy' ? '已有待处理指令，请稍后重试' : '无法提交指令' };
+		return { error: out == 'busy' ? 'Уже есть команда в очереди, повторите позже' : 'Не удалось передать команду' };
 	}
 };
 

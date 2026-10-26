@@ -65,7 +65,7 @@ dial_ensure_interfaces()
 	else
 		v6dev="$ifname"
 	fi
-	[ "$v4" != "$v6" ] || { event "接口配置冲突：IPv4 与 IPv6 接口名相同 (${v4})"; return 1; }
+	[ "$v4" != "$v6" ] || { event "Конфликт настройки интерфейсов: имена IPv4 и IPv6 совпадают (${v4})"; return 1; }
 
 	v4_exists=0; v6_exists=0
 	v4_type=$(uci -q get "network.${v4}" 2>/dev/null)
@@ -74,18 +74,18 @@ dial_ensure_interfaces()
 	[ -z "$v6_type" ] || v6_exists=1
 	if { [ "$v4_exists" = "1" ] && [ "$v4_type" != "interface" ]; } \
 		|| { [ "$v6_exists" = "1" ] && [ "$v6_type" != "interface" ]; }; then
-		event "接口配置冲突：目标名称已被非 interface section 使用，未修改 network 配置"
+		event "Конфликт настройки интерфейсов: целевое имя занято не секцией interface, конфигурация network не изменена"
 		return 1
 	fi
 	# 持久归属记录允许升级后的旧 section 被清理；无记录的旧配置只按完整拓扑谨慎识别。
 	if [ "$v4_exists" = "1" ] && [ "$v4" != "$managed_v4" ] \
 		&& ! fm350_legacy_v4_shape "$v4" "$ifname"; then
-		event "接口配置冲突：${v4} 已存在且不属于 FM350，未修改 network 配置"
+		event "Конфликт настройки интерфейсов: ${v4} уже существует и не принадлежит FM350, конфигурация network не изменена"
 		return 1
 	fi
 	if [ "$v6_exists" = "1" ] && [ "$v6" != "$managed_v6" ] \
 		&& ! fm350_legacy_v6_shape "$v6" "$ifname" "$v4"; then
-		event "接口配置冲突：${v6} 已存在且不属于 FM350，未修改 network 配置"
+		event "Конфликт настройки интерфейсов: ${v6} уже существует и не принадлежит FM350, конфигурация network не изменена"
 		return 1
 	fi
 
@@ -93,14 +93,14 @@ dial_ensure_interfaces()
 	if [ -z "$managed_v4" ] && [ "$DFLT_V4_IFNAME" != "$v4" ] \
 		&& fm350_legacy_v4_shape "$DFLT_V4_IFNAME" "$ifname"; then
 		[ "${FM350_OWNERSHIP_WARNED_V4:-0}" = "1" ] || {
-			event "检测到未登记归属的历史 IPv4 接口 ${DFLT_V4_IFNAME}；请确认后手动清理"
+			event "Обнаружен унаследованный интерфейс IPv4 ${DFLT_V4_IFNAME} без отметки принадлежности; проверьте и удалите вручную"
 			FM350_OWNERSHIP_WARNED_V4=1
 		}
 	fi
 	if [ -z "$managed_v6" ] && [ "$DFLT_V6_IFNAME" != "$v6" ] \
 		&& fm350_legacy_v6_shape "$DFLT_V6_IFNAME" "$ifname" "$DFLT_V4_IFNAME"; then
 		[ "${FM350_OWNERSHIP_WARNED_V6:-0}" = "1" ] || {
-			event "检测到未登记归属的历史 IPv6 接口 ${DFLT_V6_IFNAME}；请确认后手动清理"
+			event "Обнаружен унаследованный интерфейс IPv6 ${DFLT_V6_IFNAME} без отметки принадлежности; проверьте и удалите вручную"
 			FM350_OWNERSHIP_WARNED_V6=1
 		}
 	fi
@@ -201,7 +201,7 @@ dial_stop()
 	define=$(fcfg profile define_connect)
 	DIAL_STOP_REASON=""
 	if ! at_check "$port" "AT+CGACT=0,${define}"; then
-		DIAL_STOP_REASON="AT+CGACT=0,${define} 失败（${AT_CHECK_REASON:-响应无效}）"
+		DIAL_STOP_REASON="AT+CGACT=0,${define} не удалось (${AT_CHECK_REASON:-некорректный ответ})"
 		return 1
 	fi
 	ifdown "$(fcfg global v4_ifname)" "$(fcfg global v6_ifname)" 2>/dev/null

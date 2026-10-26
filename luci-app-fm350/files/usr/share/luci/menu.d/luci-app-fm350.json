@@ -1,6 +1,6 @@
 {
 	"admin/services/fm350": {
-		"title": "FM350 管理",
+		"title": "FM350-GL",
 		"order": 60,
 		"action": {
 			"type": "alias",
@@ -12,7 +12,7 @@
 		}
 	},
 	"admin/services/fm350/dash": {
-		"title": "状态总览",
+		"title": "Обзор",
 		"order": 5,
 		"action": {
 			"type": "view",
@@ -20,7 +20,7 @@
 		}
 	},
 	"admin/services/fm350/detail": {
-		"title": "详情表",
+		"title": "Подробно",
 		"order": 10,
 		"action": {
 			"type": "view",
@@ -28,7 +28,7 @@
 		}
 	},
 	"admin/services/fm350/at": {
-		"title": "AT 命令",
+		"title": "AT-консоль",
 		"order": 20,
 		"action": {
 			"type": "view",
@@ -36,7 +36,7 @@
 		}
 	},
 	"admin/services/fm350/dialop": {
-		"title": "拨号管理",
+		"title": "Подключение",
 		"order": 30,
 		"action": {
 			"type": "view",
@@ -44,7 +44,7 @@
 		}
 	},
 	"admin/services/fm350/config": {
-		"title": "设置",
+		"title": "Настройки",
 		"order": 40,
 		"action": {
 			"type": "view",
@@ -52,7 +52,7 @@
 		}
 	},
 	"admin/services/fm350/logview": {
-		"title": "日志",
+		"title": "Журнал",
 		"order": 50,
 		"action": {
 			"type": "view",

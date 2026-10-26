@@ -21,12 +21,12 @@ var STYLE = E('style', {}, [
 ].join('\n'));
 
 var ITEMS = [
-	[ 'enable', '启用拨号', '', '' ],
-	[ 'disable', '断开联网', '停用拨号并断开 PDP 上下文，链路中断', 'danger' ],
-	[ 'reconnect', '重新拨号', '重新激活 PDP（可能短暂断网）', 'danger' ],
-	[ 'ifup', '重建网络接口', '仅刷新 netifd 接口，不触碰模组', '' ],
-	[ 'modem_restart', '软重启模组', 'AT+CFUN 重启，约 1 分钟断网', 'danger' ],
-	[ 'usb_reset', 'USB 硬件复位', '假死无响应时使用，重新枚举模组 1~3 分钟断网', 'danger' ]
+	[ 'enable', 'Включить подключение', '', '' ],
+	[ 'disable', 'Отключить интернет', 'Отключает подключение и разрывает PDP-контекст, связь прерывается', 'danger' ],
+	[ 'reconnect', 'Переподключиться', 'Повторно активирует PDP (возможен короткий обрыв связи)', 'danger' ],
+	[ 'ifup', 'Пересоздать интерфейс', 'Обновляет только интерфейс netifd, модем не затрагивается', '' ],
+	[ 'modem_restart', 'Мягкая перезагрузка модема', 'Перезагрузка через AT+CFUN, связь пропадёт примерно на 1 минуту', 'danger' ],
+	[ 'usb_reset', 'Аппаратный сброс USB', 'Используется при зависании: переинициализация модема, связь пропадёт на 1–3 минуты', 'danger' ]
 ];
 
 return view.extend({
@@ -50,30 +50,30 @@ return view.extend({
 		var chips = E('div', {}, [
 			chip('APN', apn),
 			chip('PDP', pdp),
-			chip('上下文', define),
-			chip('拨号', enable === '1' ? '启用' : '停用')
+			chip('Контекст', define),
+			chip('Подключение', enable === '1' ? 'Включено' : 'Отключено')
 		]);
 
 		var actions = E('div', {});
 		ITEMS.forEach(function(d) {
 			var b = E('button', { 'class': 'btn' + (d[3] === 'danger' ? ' btn-danger' : '') }, d[1]);
 			b.addEventListener('click', function() {
-				if (d[0] === 'disable' && !window.confirm('断开后 5G 链路将中断，确定？'))
+				if (d[0] === 'disable' && !window.confirm('После отключения связь 5G прервётся. Продолжить?'))
 					return;
-				if (d[0] === 'reconnect' && !window.confirm('将重新激活 PDP 上下文，可能短暂断网，确定？'))
+				if (d[0] === 'reconnect' && !window.confirm('PDP-контекст будет активирован заново, возможен короткий обрыв связи. Продолжить?'))
 					return;
-				if (d[0] === 'modem_restart' && !window.confirm('模组重启期间网络中断约 1 分钟，确定？'))
+				if (d[0] === 'modem_restart' && !window.confirm('Во время перезагрузки модема связь пропадёт примерно на 1 минуту. Продолжить?'))
 					return;
-				if (d[0] === 'usb_reset' && !window.confirm('USB 复位将重新枚举模组，网络中断 1~3 分钟，确定？'))
+				if (d[0] === 'usb_reset' && !window.confirm('Сброс USB переинициализирует модем, связь пропадёт на 1–3 минуты. Продолжить?'))
 					return;
 				common.setLoading(true);
 				callDial(d[0]).then(function(r) {
 					common.setLoading(false);
-					common.notify(r.error ? ('操作失败: ' + r.error) : ('指令已入队: ' + d[1]),
+					common.notify(r.error ? ('Не удалось выполнить: ' + r.error) : ('Команда поставлена в очередь: ' + d[1]),
 						r.error ? 'error' : 'info');
 				}).catch(function(e) {
 					common.setLoading(false);
-					common.notify('调用失败: ' + (e && (e.message || e.error) ? (e.message || e.error) : String(e)), 'error');
+					common.notify('Ошибка вызова: ' + (e && (e.message || e.error) ? (e.message || e.error) : String(e)), 'error');
 				});
 			});
 			actions.appendChild(E('div', { 'class': 'fm350-action' }, [
@@ -83,9 +83,9 @@ return view.extend({
 		});
 
 		return E('div', { 'class': 'cbi-section' }, [
-			E('h3', {}, '拨号管理'),
+			E('h3', {}, 'Управление подключением'),
 			chips,
-			E('p', { 'class': 'muted' }, '点击按钮后指令经由守护队列原子执行，无需停留在本页等待。'),
+			E('p', { 'class': 'muted' }, 'Команда выполняется службой атомарно через очередь — оставаться на этой странице не нужно.'),
 			actions,
 			STYLE
 		]);

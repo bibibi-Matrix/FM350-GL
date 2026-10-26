@@ -82,13 +82,13 @@ at_check()
 	if response=$(at_run "$@"); then :; else
 		status=$?
 		AT_CHECK_REASON=$(printf '%s\n' "$response" | tr -d '\r' | awk '/ERROR/ { print; exit }')
-		[ -n "$AT_CHECK_REASON" ] || AT_CHECK_REASON="AT 命令执行失败（exit=${status}）"
+		[ -n "$AT_CHECK_REASON" ] || AT_CHECK_REASON="Ошибка выполнения AT-команды (exit=${status})"
 		AT_CHECK_REASON="${cmd}：${AT_CHECK_REASON}"
 		return 1
 	fi
 	if ! at_response_valid "$cmd" "$response"; then
 		AT_CHECK_REASON=$(printf '%s\n' "$response" | tr -d '\r' | awk '/^[ \t]*\+?(CME|CMS)[ \t]+ERROR|^[ \t]*ERROR([ :]|$)/ { sub(/^[ \t]+/, ""); print; exit }')
-		[ -n "$AT_CHECK_REASON" ] || AT_CHECK_REASON="响应缺少完整 OK 行"
+		[ -n "$AT_CHECK_REASON" ] || AT_CHECK_REASON="В ответе нет полной строки OK"
 		AT_CHECK_REASON="${cmd}：${AT_CHECK_REASON}"
 		return 1
 	fi

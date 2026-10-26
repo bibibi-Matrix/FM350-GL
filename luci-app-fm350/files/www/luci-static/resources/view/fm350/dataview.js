@@ -43,45 +43,45 @@ return view.extend({
 
 		var modRows = [];
 		if (at.ati)
-			modRows.push(row('型号', E('pre', { 'style': 'white-space:pre-wrap;margin:0' }, at.ati)));
+			modRows.push(row('Модель', E('pre', { 'style': 'white-space:pre-wrap;margin:0' }, at.ati)));
 		if (at.cpin)
 			modRows.push(row('SIM', at.cpin));
 		if (at.cops)
-			modRows.push(row('运营商', at.cops));
+			modRows.push(row('Оператор', at.cops));
 		if (st.net && st.net.at_port)
-			modRows.push(row('AT 端口', st.net.at_port));
+			modRows.push(row('Порт AT', st.net.at_port));
 
 		var cc = (data.cell && data.cell.cell) || {};
 		if (cc.raw || cc.rsrp) {
-			var sigTip = 'RSRP 信号强度(dBm,越接近0越强)；RSRQ 信号质量(dB,≥-10 良好)；SINR 为 SS-SINR（源自 AT+CESQ，dB,≥15 良好）';
+			var sigTip = 'RSRP — уровень сигнала (дБм, чем ближе к 0, тем сильнее); RSRQ — качество сигнала (дБ, ≥-10 хорошо); SINR — SS-SINR (из AT+CESQ, дБ, ≥15 хорошо)';
 			var sig = E('span', { 'title': sigTip, 'style': 'cursor:help' }, [
 				(cc.netmode ? cc.netmode + ' | ' : '') +
-				(cc.band ? 'Band ' + cc.band + (cc.bw ? ' (' + cc.bw + 'MHz)' : '') + ' | ' : '') +
-				(cc.rsrp ? 'RSRP ' + cc.rsrp + 'dBm | ' : '') +
-				(cc.rsrq ? 'RSRQ ' + cc.rsrq + 'dB | ' : '') +
+				(cc.band ? 'Band ' + cc.band + (cc.bw ? ' (' + cc.bw + ' МГц)' : '') + ' | ' : '') +
+				(cc.rsrp ? 'RSRP ' + cc.rsrp + ' dBm | ' : '') +
+				(cc.rsrq ? 'RSRQ ' + cc.rsrq + ' dB | ' : '') +
 				(cc.sinr ? 'SINR ' + cc.sinr : '')
 			]);
 			if (!cc.rsrp && cc.raw)
 				sig.appendChild(E('pre', { 'style': 'white-space:pre-wrap;margin:0' }, cc.raw));
-			modRows.push(row('信号', sig));
+			modRows.push(row('Сигнал', sig));
 			if (cc.ss_rsrp || cc.ss_rsrq || cc.ss_sinr) {
-				modRows.push(row('信号（CESQ 对照）', E('span', {
+				modRows.push(row('Сигнал (по CESQ)', E('span', {
 					'style': 'font-family:var(--font-mono,monospace);font-size:.85rem'
 				}, 'SS-RSRP ' + (cc.ss_rsrp || '-') + ' dBm · SS-RSRQ ' + (cc.ss_rsrq || '-') +
 					' dB · SS-SINR ' + (cc.ss_sinr || '-') + ' dB')));
 			}
-			modRows.push(row('基站', E('span', { 'style': 'font-family:var(--font-mono,monospace);font-size:.85rem' },
+			modRows.push(row('Базовая станция', E('span', { 'style': 'font-family:var(--font-mono,monospace);font-size:.85rem' },
 				(cc.mcc && cc.mnc ? 'MCC ' + cc.mcc + ' · MNC ' + cc.mnc : '') +
 				(cc.tac ? ' · TAC ' + cc.tac : '') +
-				(cc.cellid ? ' · 小区 ' + cc.cellid : '') +
+				(cc.cellid ? ' · Сота ' + cc.cellid : '') +
 				(cc.band ? ' · Band ' + cc.band : '') || '—')));
 		}
 
 		var ca = st.ca || {};
 		if (ca.raw || ca.pcc_band) {
 			var caState = ca.aggregated
-				? '已激活（' + (ca.scc_active || ca.scc_count) + ' 个辅载波）'
-				: (ca.scc_count > 0 ? '已配置未激活（' + ca.scc_count + ' 个辅载波）' : '未聚合');
+				? 'Активна (' + (ca.scc_active || ca.scc_count) + ' доп. несущих)'
+				: (ca.scc_count > 0 ? 'Настроена, не активна (' + ca.scc_count + ' доп. несущих)' : 'Не агрегируется');
 			var caEl = E('span', {}, [
 				E('b', {}, caState),
 				ca.pcc_band
@@ -93,32 +93,32 @@ return view.extend({
 				caEl.appendChild(E('div', { 'style': 'font-size:.82rem' },
 					'SCC' + (i + 1) + ': n' + (s.band || '-') + ' · PCI ' + (s.pci || '-') +
 					' · ARFCN ' + (s.arfcn || '-') + (s.rsrp ? ' · ' + s.rsrp + ' dBm' : '') +
-					'（' + (s.state === 2 ? '已激活' : '未激活') + '）'));
+					' (' + (s.state === 2 ? 'активна' : 'не активна') + ')'));
 			});
 			if (ca.raw)
 				caEl.appendChild(E('pre', { 'style': 'white-space:pre-wrap;margin:2px 0 0;font-size:.78rem' }, String(ca.raw)));
-			modRows.push(row('载波聚合', caEl));
+			modRows.push(row('Агрегация несущих', caEl));
 		}
 
 		var stateEl = badge(st.state);
 		var problemVal = E('span', {}, '—');
 		var netRows = [
-			row('守护状态', stateEl),
-			row('当前问题', problemVal),
-			row('USB 路径', st.usb && st.usb.path
+			row('Состояние службы', stateEl),
+			row('Текущая проблема', problemVal),
+			row('Путь USB', st.usb && st.usb.path
 				? st.usb.path + (st.usb.vid ? ' · ' + st.usb.vid + ':' + st.usb.pid : '') +
 				  (st.usb.devnode ? ' (' + st.usb.devnode + ')' : '')
-				: '未发现'),
-			row('网络接口', st.net && st.net.ifname ? st.net.ifname : '未就绪'),
-			row('IPv4（AT 权威）', st.net && st.net.v4_at ? st.net.v4_at : '未拨通'),
-			row('IPv4 内核地址', st.net && st.net.v4_kernel ? st.net.v4_kernel : '无'),
-			row('IPv4 路由', st.net && st.net.v4_route ? '正常' : '丢失'),
-			row('IPv6 地址', st.net && st.net.v6 ? st.net.v6 : '无'),
-			row('IPv6 路由', st.net && st.net.v6_route ? '正常(' + (st.net.v6_gw ? st.net.v6_gw : '') + ')' : '丢失')
+				: 'Не найден'),
+			row('Сетевой интерфейс', st.net && st.net.ifname ? st.net.ifname : 'Не готов'),
+			row('IPv4 (по данным AT)', st.net && st.net.v4_at ? st.net.v4_at : 'Не подключено'),
+			row('IPv4 (адрес в ядре)', st.net && st.net.v4_kernel ? st.net.v4_kernel : 'Нет'),
+			row('Маршрут IPv4', st.net && st.net.v4_route ? 'Есть' : 'Отсутствует'),
+			row('Адрес IPv6', st.net && st.net.v6 ? st.net.v6 : 'Нет'),
+			row('Маршрут IPv6', st.net && st.net.v6_route ? 'Есть (' + (st.net.v6_gw ? st.net.v6_gw : '') + ')' : 'Отсутствует')
 		];
 
 		if (st.problem)
-			problemVal.textContent = st.problem_name + '（级别 ' + st.recovery_level + '，已持续 ' + st.elapsed + 's）';
+			problemVal.textContent = st.problem_name + ' (уровень ' + st.recovery_level + ', длится ' + st.elapsed + ' с)';
 
 		var evRows = [];
 		(data.events && data.events.events || []).forEach(function(l) {
@@ -126,9 +126,9 @@ return view.extend({
 		});
 
 		var body = E('div', {}, [
-			table('模组/信号', modRows),
-			table('网络与守护', netRows),
-			table('事件时间线', evRows.length ? evRows : E('td', {}, '无事件'))
+			table('Модуль и сигнал', modRows),
+			table('Сеть и служба', netRows),
+			table('Хронология событий', evRows.length ? evRows : E('td', {}, 'Событий нет'))
 		]);
 
 		body.appendChild(E('style', {}, [
@@ -143,7 +143,7 @@ return view.extend({
 				stateEl.className = common.stateBadgeClass(s2);
 				var p2 = d.state || {};
 				problemVal.textContent = p2.problem
-					? p2.problem_name + '（级别 ' + p2.recovery_level + '，已持续 ' + p2.elapsed + 's）'
+					? p2.problem_name + ' (уровень ' + p2.recovery_level + ', длится ' + p2.elapsed + ' с)'
 					: '—';
 			}).catch(function() {});
 		});

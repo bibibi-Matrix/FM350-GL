@@ -45,10 +45,10 @@ function row(label, valEl) {
 function fmtBytes(n) {
 	n = parseInt(n, 10) || 0;
 	if (n < 1024)
-		return n + ' B';
+		return n + ' Б';
 	if (n < 1024 * 1024)
-		return (n / 1024).toFixed(1) + ' KB';
-	return (n / 1024 / 1024).toFixed(1) + ' MB';
+		return (n / 1024).toFixed(1) + ' КБ';
+	return (n / 1024 / 1024).toFixed(1) + ' МБ';
 }
 
 function setText(el, text) {
@@ -61,19 +61,19 @@ function pillClass(ok) {
 }
 
 var SIG_TIPS = {
-	RSRP: '参考信号接收功率（信号强度），dBm，越接近 0 越强',
-	RSRQ: '参考信号接收质量，dB，≥-10 良好，≤-15 差',
-	SINR: 'SS-SINR（同步信号信干噪比，源自 3GPP AT+CESQ），dB，≥15 良好，≤5 差'
+	RSRP: 'Мощность опорного сигнала (уровень сигнала), дБм: чем ближе к 0, тем сильнее',
+	RSRQ: 'Качество опорного сигнала, дБ: ≥-10 — хорошо, ≤-15 — плохо',
+	SINR: 'SS-SINR (отношение сигнал/шум, из 3GPP AT+CESQ), дБ: ≥15 — хорошо, ≤5 — плохо'
 };
 
-// [名称, 色条下限, 色条上限, 良好阈值, 一般阈值, 单位]
+// [название, нижняя граница шкалы, верхняя граница шкалы, порог «хорошо», порог «средне», единица]
 var SIG_DEFS = [
 	[ 'RSRP', -157, -60, -90, -105, ' dBm' ],
 	[ 'RSRQ', -20, -3, -10, -15, ' dB' ],
 	[ 'SINR', -23, 40, 15, 5, ' dB' ]
 ];
 
-// 信号三行：色条原位更新，避免替换节点后引用失效
+// Три строки сигнала: шкала обновляется на месте, чтобы ссылки на узлы не терялись
 function signalBlock() {
 	var bars = E('div', { 'style': 'display:flex;flex-direction:column;gap:6px' });
 	var cells = {};
@@ -94,11 +94,11 @@ function signalBlock() {
 
 	var note = E('div', {
 		'style': 'font-size:.75rem;color:var(--text-secondary,#8a8a8a)',
-		'title': SIG_TIPS.RSRP + '；' + SIG_TIPS.RSRQ + '；' + SIG_TIPS.SINR
-	}, 'RSRP 信号强度 · RSRQ 信号质量 · SINR 为 SS-SINR（AT+CESQ，dB，越高越好）');
+		'title': SIG_TIPS.RSRP + '; ' + SIG_TIPS.RSRQ + '; ' + SIG_TIPS.SINR
+	}, 'RSRP — уровень сигнала · RSRQ — качество сигнала · SINR — SS-SINR (AT+CESQ, дБ, чем выше, тем лучше)');
 
 	var raw = E('pre', { 'class': 'fm350-pre' });
-	var wait = E('span', { 'class': 'fm350-muted' }, '暂无信号数据（等待快照）');
+	var wait = E('span', { 'class': 'fm350-muted' }, 'Нет данных о сигнале (ожидание снимка)');
 
 	var box = E('div', {
 		'style': 'width:100%;flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;text-align:left'
@@ -137,18 +137,18 @@ function signalBlock() {
 	return { el: box, update: update };
 }
 
-// 载波聚合：PCC 固定三行文本，SCC 行按数量重建
+// Агрегация несущих: для PCC — фиксированные строки, строки SCC перестраиваются по количеству
 function caBlock() {
-	var wait = E('span', { 'class': 'fm350-muted' }, '等待快照');
+	var wait = E('span', { 'class': 'fm350-muted' }, 'Ожидание снимка');
 	var pill = E('span', {
 		'class': 'fm350-pill',
-		'title': '已激活=辅载波正在参与聚合（速率提升中）；已配置未激活=基站已下发但暂未启用，会按负载/省电策略动态切换'
-	}, '未聚合');
+		'title': 'Активна — дополнительная несущая участвует в агрегации (скорость выше); Настроена, но не активна — базовая станция выдала её, но пока не включила, переключение идёт по нагрузке и энергосбережению'
+	}, 'Не агрегируется');
 	var pillNote = E('span', { 'style': 'margin-left:8px;font-size:.8rem;color:var(--text-secondary,#8a8a8a)' });
 	var pcc = E('div', { 'class': 'fm350-mono' });
 	var scc = E('div', {});
 	var hint = E('div', { 'style': 'font-size:.75rem;color:var(--text-secondary,#8a8a8a)' },
-		'PCC=主载波，SCC=辅载波；ARFCN 为频点号、PCI 为小区标识；未激活的 SCC 不计入聚合速率');
+		'PCC — основная несущая, SCC — дополнительная; ARFCN — номер частотного канала, PCI — идентификатор соты; неактивные SCC не учитываются в агрегации');
 	var body = E('div', {
 		'style': 'display:none;flex-direction:column;gap:4px'
 	}, [ E('div', {}, [ pill, pillNote ]), pcc, scc, hint ]);
@@ -170,14 +170,14 @@ function caBlock() {
 		if (ca.aggregated) {
 			pill.className = 'fm350-pill fm350-ok';
 			pill.style.background = '';
-			setText(pill, '已激活 ×' + (ca.scc_active || ca.scc_count));
+			setText(pill, 'Активно ×' + (ca.scc_active || ca.scc_count));
 		}
 		else {
 			pill.className = 'fm350-pill';
 			pill.style.background = '#7d7d7d';
-			setText(pill, ca.scc_count > 0 ? '已配置未激活 ×' + ca.scc_count : '未聚合');
+			setText(pill, ca.scc_count > 0 ? 'Настроено, не активно ×' + ca.scc_count : 'Не агрегируется');
 		}
-		setText(pillNote, ca.aggregated ? '辅载波参与提速中' : (ca.scc_count > 0 ? '辅载波待激活' : '仅单载波工作'));
+		setText(pillNote, ca.aggregated ? 'Дополнительные несущие участвуют в агрегации' : (ca.scc_count > 0 ? 'Дополнительная несущая ожидает активации' : 'Работа на одной несущей'));
 		setText(pcc, 'PCC: n' + ca.pcc_band + ' · PCI ' + (ca.pcc_pci || '-') + ' · ARFCN ' + (ca.pcc_arfcn || '-') +
 			(ca.pcc_rsrp ? ' · ' + ca.pcc_rsrp + ' dBm' : ''));
 
@@ -187,7 +187,7 @@ function caBlock() {
 			scc.appendChild(E('div', { 'class': 'fm350-mono' },
 				'SCC' + (i + 1) + ': n' + (s.band || '-') + ' · PCI ' + (s.pci || '-') +
 				' · ARFCN ' + (s.arfcn || '-') + (s.rsrp ? ' · ' + s.rsrp + ' dBm' : '') +
-				'（' + (s.state === 2 ? '已激活' : '未激活') + '）'));
+				' (' + (s.state === 2 ? 'активна' : 'не активна') + ')'));
 		});
 	}
 
@@ -204,14 +204,14 @@ return view.extend({
 		var st = (data && data.state) || {};
 		var at = (data && data.at) || {};
 
-		// 卡片1: 模组信息状态
+		// Карточка 1: состояние модуля
 		var modelVal = E('span', { 'class': 'fm350-mono' }, '-');
-		var simVal = E('span', { 'class': 'fm350-pill fm350-bad' }, '未知');
+		var simVal = E('span', { 'class': 'fm350-pill fm350-bad' }, 'Неизвестно');
 		var copsVal = E('span', {}, '-');
 		var stationVal = E('span', { 'class': 'fm350-mono', 'style': 'font-size:.9rem' }, '—');
-		var usbVal = E('span', { 'class': 'fm350-mono' }, '未发现');
-		var atPortVal = E('span', { 'class': 'fm350-mono' }, '未就绪');
-		var snapshotVal = E('span', { 'class': 'fm350-mono', 'style': 'font-size:.85rem' }, '未采集');
+		var usbVal = E('span', { 'class': 'fm350-mono' }, 'Не найден');
+		var atPortVal = E('span', { 'class': 'fm350-mono' }, 'Не готов');
+		var snapshotVal = E('span', { 'class': 'fm350-mono', 'style': 'font-size:.85rem' }, 'Нет данных');
 
 		var sig = signalBlock();
 		var ca = caBlock();
@@ -219,48 +219,48 @@ return view.extend({
 		var card1 = E('div', { 'class': 'fm350-card', 'style': 'flex:1.1' }, [
 			E('div', { 'class': 'fm350-bar', 'style': 'background:#3466d6' }),
 			E('div', { 'class': 'fm350-body' }, [
-				E('h3', { 'class': 'fm350-title' }, '📡 模组信息状态'),
-				E('p', { 'class': 'fm350-sub' }, 'FM350-GL · USB 自动发现'),
-				row('型号 / 固件', modelVal),
-				row('SIM 卡', simVal),
-				row('运营商', copsVal),
-				row('基站', stationVal),
-				row('信息快照', snapshotVal),
+				E('h3', { 'class': 'fm350-title' }, '📡 Состояние модуля'),
+				E('p', { 'class': 'fm350-sub' }, 'FM350-GL · автоопределение по USB'),
+				row('Модель / прошивка', modelVal),
+				row('SIM-карта', simVal),
+				row('Оператор', copsVal),
+				row('Базовая станция', stationVal),
+				row('Снимок данных', snapshotVal),
 				E('div', { 'class': 'fm350-row', 'style': 'align-items:flex-start' }, [
-					E('span', { 'class': 'fm350-label' }, '载波聚合'),
+					E('span', { 'class': 'fm350-label' }, 'Агрегация несущих'),
 					ca.el
 				]),
 				E('div', { 'class': 'fm350-row', 'style': 'align-items:flex-start' }, [
-					E('span', { 'class': 'fm350-label' }, '信号'),
+					E('span', { 'class': 'fm350-label' }, 'Сигнал'),
 					sig.el
 				]),
 				row('USB', usbVal),
-				row('AT 端口', atPortVal)
+				row('Порт AT', atPortVal)
 			])
 		]);
 
-		// 卡片2: 网络与拨号状态
-		var badge = E('span', { 'class': 'fm350-badge' }, '未知');
-		var probVal = E('span', {}, '一切正常');
+		// Карточка 2: состояние сети и подключения
+		var badge = E('span', { 'class': 'fm350-badge' }, 'Неизвестно');
+		var probVal = E('span', {}, 'Всё в порядке');
 		var disconnectVal = E('span', {}, '—');
-		var v4Text = E('span', { 'class': 'fm350-mono' }, '未拨通');
-		var v4Pill = E('span', { 'class': 'fm350-pill fm350-bad' }, '路由丢失');
-		var v6Text = E('span', { 'class': 'fm350-mono' }, '无');
-		var v6Pill = E('span', { 'class': 'fm350-pill fm350-bad' }, '路由丢失');
-		var trVal = E('span', { 'class': 'fm350-mono' }, '↓ 0 B · ↑ 0 B');
+		var v4Text = E('span', { 'class': 'fm350-mono' }, 'Не подключено');
+		var v4Pill = E('span', { 'class': 'fm350-pill fm350-bad' }, 'Маршрут отсутствует');
+		var v6Text = E('span', { 'class': 'fm350-mono' }, 'Нет');
+		var v6Pill = E('span', { 'class': 'fm350-pill fm350-bad' }, 'Маршрут отсутствует');
+		var trVal = E('span', { 'class': 'fm350-mono' }, '↓ 0 Б · ↑ 0 Б');
 		var card2Bar = E('div', { 'class': 'fm350-bar' });
 
 		var card2 = E('div', { 'class': 'fm350-card' }, [
 			card2Bar,
 			E('div', { 'class': 'fm350-body' }, [
-				E('h3', { 'class': 'fm350-title' }, '🌐 网络与拨号状态'),
-				E('p', { 'class': 'fm350-sub' }, '守护自动恢复 · 每 5s 刷新'),
-				row('拨号状态', badge),
-				row('停用断开', disconnectVal),
-				row('当前问题', probVal),
+				E('h3', { 'class': 'fm350-title' }, '🌐 Сеть и подключение'),
+				E('p', { 'class': 'fm350-sub' }, 'Служба автовосстановления · обновление каждые 5 с'),
+				row('Состояние подключения', badge),
+				row('Отключение', disconnectVal),
+				row('Текущая проблема', probVal),
 				row('IPv4', E('span', {}, [ v4Text, v4Pill ])),
 				row('IPv6', E('span', {}, [ v6Text, v6Pill ])),
-				row('数据计数', trVal)
+				row('Счётчик трафика', trVal)
 			])
 		]);
 
@@ -274,15 +274,15 @@ return view.extend({
 			function snapshotAge(name, fallbackAge) {
 				var item = snaps[name] || {};
 				if (!item.updated_at)
-					return '未采集';
+					return 'нет данных';
 				if (!item.available)
-					return '不可用';
+					return 'недоступно';
 				var maxAge = item.interval || fallbackAge;
 				var age = Math.max(0, Math.floor(Date.now() / 1000 - item.updated_at));
-				return age > maxAge * 2 ? '陈旧 ' + age + 's' : age + 's';
+				return age > maxAge * 2 ? 'устарело ' + age + ' с' : age + ' с';
 			}
 
-			// 模组信息
+			// Состояние модуля
 			setText(modelVal, '-');
 			if (atData.ati) {
 				var m = atData.ati.match(/Model:\s*(\S+)/);
@@ -291,7 +291,7 @@ return view.extend({
 			}
 			var simOk = /READY/.test(atData.cpin || '');
 			simVal.className = 'fm350-pill ' + (simOk ? 'fm350-ok' : 'fm350-bad');
-			setText(simVal, simOk ? 'READY' : ((atData.cpin || '').trim() || '未知'));
+			setText(simVal, simOk ? 'ГОТОВА' : ((atData.cpin || '').trim() || 'Неизвестно'));
 
 			setText(copsVal, '-');
 			if (atData.cops) {
@@ -304,38 +304,38 @@ return view.extend({
 				(cc.tac ? ' · TAC ' + cc.tac : '') +
 				(cc.cellid ? ' · ' + cc.cellid : '') +
 				(cc.band ? ' · Band ' + cc.band : '') || '—');
-			setText(usbVal, (usb.path || '未发现') + (usb.vid ? ' · ' + usb.vid + ':' + usb.pid : ''));
-			setText(atPortVal, net.at_port || '未就绪');
-			setText(snapshotVal, 'AT ' + snapshotAge('at', 30) + ' · 小区 ' + snapshotAge('cell', 120) +
+			setText(usbVal, (usb.path || 'не найден') + (usb.vid ? ' · ' + usb.vid + ':' + usb.pid : ''));
+			setText(atPortVal, net.at_port || 'не готов');
+			setText(snapshotVal, 'AT ' + snapshotAge('at', 30) + ' · Сота ' + snapshotAge('cell', 120) +
 				' · CA ' + snapshotAge('ca', 120));
 			sig.update(cc);
 			ca.update(state.ca);
 
-			// 网络与拨号
+			// Сеть и подключение
 			var netState = state.state || 'UNKNOWN';
 			setText(badge, common.stateName(netState));
 			badge.style.background = common.stateColor(netState);
 			card2Bar.style.background = common.stateColor(netState);
 			var profile = state.profile || {};
 			var disconnectNames = {
-				enabled: '拨号已启用',
-				disabled: '已停用 / PDP 已断开',
-				pending: '待断开',
-				failed: '断开失败，稍后重试'
+				enabled: 'Подключение включено',
+				disabled: 'Отключено / PDP разорван',
+				pending: 'Ожидание отключения',
+				failed: 'Не удалось отключить, повтор позже'
 			};
 			setText(disconnectVal, disconnectNames[profile.disconnect_status] || '—');
 
 			setText(probVal, state.problem
-				? state.problem_name + ' · L' + state.recovery_level + ' · ' + state.elapsed + 's'
-				: '一切正常');
+				? state.problem_name + ' · L' + state.recovery_level + ' · ' + state.elapsed + ' с'
+				: 'Всё в порядке');
 
-			setText(v4Text, net.v4_at || '未拨通');
+			setText(v4Text, net.v4_at || 'Не подключено');
 			v4Pill.className = pillClass(!!net.v4_route);
-			setText(v4Pill, net.v4_route ? '路由正常' : '路由丢失');
+			setText(v4Pill, net.v4_route ? 'Маршрут в норме' : 'Маршрут отсутствует');
 
-			setText(v6Text, net.v6 || '无');
+			setText(v6Text, net.v6 || 'Нет');
 			v6Pill.className = pillClass(!!net.v6_route);
-			setText(v6Pill, net.v6_route ? '路由正常' : '路由丢失');
+			setText(v6Pill, net.v6_route ? 'Маршрут в норме' : 'Маршрут отсутствует');
 
 			setText(trVal, '↓ ' + fmtBytes(net.rx) + ' · ↑ ' + fmtBytes(net.tx));
 		}
